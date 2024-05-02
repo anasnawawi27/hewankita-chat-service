@@ -301,12 +301,14 @@ exports.find = async (req, res) => {
 
   const errors = [];
 
-  if (!query.sender_id) {
-    errors.push("Sender ID wajib diisi");
-  }
+  if (!query.chat_id) {
+    if (!query.sender_id) {
+      errors.push("Sender ID wajib diisi");
+    }
 
-  if (!query.receiver_id) {
-    errors.push("Receiver ID wajib diisi");
+    if (!query.receiver_id) {
+      errors.push("Receiver ID wajib diisi");
+    }
   }
 
   if (errors.length) {
@@ -314,6 +316,7 @@ exports.find = async (req, res) => {
     return res.status(output.statusCode).send(output);
   }
 
+  const chatId = query.chat_id;
   const userId = query.sender_id;
   const user = await User.findByPk(userId);
 
@@ -323,31 +326,50 @@ exports.find = async (req, res) => {
   }
 
   let data = {};
-  const chatHeading = await ChatList.findOne({
-    where: [
-      {
-        sender_id: {
-          [Op.or]: [query.sender_id, query.receiver_id],
+  let chatHeading = null;
+  if (!chatId) {
+    chatHeading = await ChatList.findOne({
+      where: [
+        {
+          sender_id: {
+            [Op.or]: [query.sender_id, query.receiver_id],
+          },
+          receiver_id: {
+            [Op.or]: [query.sender_id, query.receiver_id],
+          },
         },
-        receiver_id: {
-          [Op.or]: [query.sender_id, query.receiver_id],
-        },
-      },
-    ],
-    include: [
-      { model: User, as: "user" },
-      { model: User, as: "shop", include: [{ model: Shop, as: "shop" }] },
-    ],
-  });
+      ],
+      include: [
+        { model: User, as: "user" },
+        { model: User, as: "shop", include: [{ model: Shop, as: "shop" }] },
+      ],
+    });
+  } else {
+    chatHeading = await ChatList.findOne({
+      where: [{ id: chatId }],
+      include: [
+        { model: User, as: "user" },
+        { model: User, as: "shop", include: [{ model: Shop, as: "shop" }] },
+      ],
+    });
+  }
+
   data.heading = chatHeading;
 
   if (chatHeading == null) {
     data.messages = [];
   } else {
-    data.messages = await Chats.findAll({
-      where: { chat_id: chatHeading.id },
-      include: ["pet"],
-    });
+    if (!chatId) {
+      data.messages = await Chats.findAll({
+        where: { chat_id: chatHeading.id },
+        include: ["pet"],
+      });
+    } else {
+      data.messages = await Chats.findAll({
+        where: { chat_id: chatId },
+        include: ["pet"],
+      });
+    }
   }
 
   output.data = data;
