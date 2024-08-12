@@ -21,6 +21,7 @@ db.user = require("./user.model")(sequelize, Sequelize);
 db.shop = require("./shop.model")(sequelize, Sequelize);
 db.chats = require("./chats.model")(sequelize, Sequelize);
 db.pet = require("./pet.model")(sequelize, Sequelize);
+db.notification = require("./notification.model")(sequelize, Sequelize);
 
 db.chat_list.belongsTo(db.user, {
   targetKey: "id",

@@ -10,8 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@onesignal/node-onesignal": "^5.0.0-alpha-01",
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "moment": "^2.30.1",
     "mysql2": "^3.9.5",
     "sequelize": "^6.37.3",
     "socket.io": "^4.7.5"

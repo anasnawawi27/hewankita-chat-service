@@ -20,6 +20,7 @@ module.exports = (sequelize, Sequelize) => {
       profile_image: Sequelize.TEXT,
       created_at: Sequelize.DATE,
       updated_at: Sequelize.DATE,
+      deleted_at: Sequelize.DATE,
     },
     {
       // options
@@ -28,6 +29,7 @@ module.exports = (sequelize, Sequelize) => {
       tableName: "users",
       createdAt: "created_at",
       updatedAt: "updated_at",
+      deletedAt: "deleted_at",
       underscore: true,
     }
   );

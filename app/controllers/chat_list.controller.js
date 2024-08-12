@@ -1,10 +1,14 @@
 const db = require("../models");
+const express = require("express");
 const Sequelize = require("sequelize");
+
 const Op = Sequelize.Op;
 const ChatList = db.chat_list;
 const User = db.user;
 const Shop = db.shop;
 const Chats = db.chats;
+
+const io = require("./../../server");
 
 //CREATE
 exports.create = async (req, res) => {
@@ -107,13 +111,45 @@ exports.create = async (req, res) => {
           include: ["pet"],
         });
 
-        output.data = {
+        const dataObj = {
           receiver: receiver_id,
           list,
           list_self,
           detail,
           chat_id: chatId,
         };
+
+        //kirim notifikasi onesignal ke receiver
+
+        //save data notifikasi ke db
+
+        //trigger socket update badge notifikasi, event notificationsUser-(admin / user_id)
+
+        //update tab chat badge si receiver
+        const unseenChatTab = await Chats.count({
+          where: [
+            {
+              user_id: { [Op.not]: receiver_id },
+              seen: 0,
+              chat_id: chatId,
+            },
+          ],
+          attributes: [[Sequelize.fn("COUNT", 0), "count"]],
+        });
+        console.warn(io);
+        console.warn("badgeChat-User" + receiver_id, unseenChatTab);
+        io.emit("badgeChat-User" + receiver_id, unseenChatTab);
+
+        //update messages receiver
+        io.emit("receiver-" + dataObj.receiver, dataObj);
+
+        //update messages sender
+        io.emit("receive-update-self-" + sender_id, {
+          list: list_self,
+          receiver: sender_id,
+        });
+
+        output.data = dataObj;
         output.success = true;
         output.statusCode = 200;
         output.message = "Chat Berhasil dikirim!";
@@ -185,6 +221,10 @@ exports.create = async (req, res) => {
 
 // GET ALL
 exports.findAll = async (req, res) => {
+  setInterval(() => {
+    io.emit("TEST-SOCKET", "DATA FROM SOCKET");
+  }, 3000);
+
   const output = {
     success: false,
     statusCode: 400,
@@ -395,6 +435,10 @@ exports.seen = async (req, res) => {
     errors.push("Receiver ID wajib diisi");
   }
 
+  if (!payload.sender_id) {
+    errors.push("Sender ID wajib diisi");
+  }
+
   if (errors.length) {
     output.errors = errors;
     return res.status(output.statusCode).send(output);
@@ -433,10 +477,18 @@ exports.seen = async (req, res) => {
         ],
       });
 
-      output.data = {
+      //trigger event ke pengirim pesan (update checked seen)
+      io.emit("receive-unseen-" + payload.sender_id, {
+        chat: payload.chat_id,
         receiver: payload.receiver_id,
+      });
+
+      //trigger event update chat list pembuka pesan
+      io.emit("receive-seen-" + payload.receiver_id, {
         list,
-      };
+        receiver: payload.sender_id,
+      });
+
       output.success = true;
       output.statusCode = 200;
       res.status(output.statusCode).json(output);
